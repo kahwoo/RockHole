@@ -115,7 +115,7 @@ const pmb = new CANNON.Material(), pms = new CANNON.Material(), pmt = new CANNON
 const byId = id => document.getElementById(id);
 const on = (el, ev, fn, o=false) => el.addEventListener(ev, fn, o);
 let isStopped = false, stopTimer = 0, scoreSaved = false;
-let totalDistance = 0, throwStartPosition = new CANNON.Vec3();
+let totalDistance = 0, lastPosition = new CANNON.Vec3();
 
 
 const maxTrailPoints = 500;
@@ -233,7 +233,7 @@ function reset() {
     stopTimer = 0;
     scoreSaved = false;
     totalDistance = 0;
-    throwStartPosition.copy(iBP);
+    lastPosition.copy(iBP);
     byId('dsc').innerText = `Distance: 0.00 m`;
 
    
@@ -332,7 +332,7 @@ function pUp(e) {
                     const hfs = 120;
                     const ffs = isT ? 500 : 750;
                     bb.applyImpulse(new CANNON.Vec3(dV.x * hfs * vm, 0, -dV.y * ffs * vm), bb.position);
-                    throwStartPosition.copy(bb.position); // Set starting point for distance calc
+                    lastPosition.copy(bb.position); // Set starting point for distance calc
                     tB = true; // Start tracking distance and game state
                     if (isT) {
                         tglCam();
@@ -355,7 +355,7 @@ function onKD(e) {
         case 'ArrowUp': 
             bb.type = CANNON.Body.DYNAMIC; 
             bb.applyImpulse(new CANNON.Vec3(0, 0, -tf), bb.position); 
-            throwStartPosition.copy(bb.position); // Set starting point for distance calc
+            lastPosition.copy(bb.position); // Set starting point for distance calc
             tB = true; // Also start tracking for keyboard throw
             break;
         case 'ArrowLeft': bb.applyImpulse(new CANNON.Vec3(-nf, 0, 0), bb.position); break;
@@ -594,9 +594,12 @@ function loop() {
     byId('spc').innerText = `Speed: ${speed.toFixed(2)} m/s`;
     byId('hpc').innerText = `Height: ${(bb.position.y - .25).toFixed(2)} m`;
     
+    const currentPosition = bb.position;
     if (tB) {
-      totalDistance = bb.position.distance(throwStartPosition);
+      const distanceThisFrame = currentPosition.distance(lastPosition);
+      totalDistance += distanceThisFrame;
     }
+    lastPosition.copy(currentPosition);
     byId('dsc').innerText = `Distance: ${totalDistance.toFixed(2)} m`;
 
 
