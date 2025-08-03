@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Rock Hole!</title>
+<style>
+body{margin:0;overflow:hidden;font-family:sans-serif}
+canvas{display:block;width:100vw;height:100vh;outline:none}
+#wm{position:absolute;top:10px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.7);color:#fff;padding:8px 15px;border-radius:5px;font-size:1.2em;text-align:center;z-index:10;cursor:pointer}
+#sc{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.7);color:#fff;padding:8px 15px;border-radius:5px;font-size:1.2em;z-index:10;pointer-events:none}
+#st{position:absolute;top:10px;right:10px;background:rgba(0,0,0,.7);color:#fff;padding:8px 15px;border-radius:5px;font-size:1.2em;z-index:10;pointer-events:none;display:flex;flex-direction:column;gap:5px}
+#spc,#hpc,#dsc{padding:0}
+#ctrls{position:absolute;bottom:10px;left:10px;z-index:10}
+#mb{background-color:#007bff;color:#fff;padding:10px 20px;border:none;border-radius:8px;cursor:pointer;font-size:1em;box-shadow:0 4px 6px rgba(0,0,0,.1);transition:background-color .3s ease,transform .1s ease}
+#mb:hover{background-color:#0056b3;transform:translateY(-2px)}
+#mb:active{transform:translateY(0);box-shadow:0 2px 4px rgba(0,0,0,.1)}
+#mn{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.9);display:flex;flex-direction:column;justify-content:center;align-items:center;z-index:20;transition:opacity .3s ease;opacity:0;visibility:hidden}
+#mn.active{opacity:1;visibility:visible}
+#mn button{background-color:#4CAF50;color:#fff;padding:15px 30px;border:none;border-radius:10px;cursor:pointer;font-size:1.5em;margin:10px;width:80%;max-width:300px;box-shadow:0 6px 8px rgba(0,0,0,.2);transition:background-color .3s ease,transform .1s ease}
+#mn button:hover{background-color:#45a049;transform:translateY(-2px)}
+#mn button:active{transform:translateY(0);box-shadow:0 3px 5px rgba(0,0,0,.2)}
+#mn #cmb{background-color:#dc3545}
+#mn #cmb:hover{background-color:#c82333}
+.modal{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.95);display:flex;justify-content:center;align-items:center;z-index:30;opacity:0;visibility:hidden;transition:opacity .3s ease}
+.modal.active{opacity:1;visibility:visible}
+.mc{background:#222;color:#fff;padding:30px;border-radius:15px;max-width:600px;text-align:left;box-shadow:0 0 20px rgba(0,255,255,.5)}
+.mc h3{text-align:center;margin-top:0;color:#00ffff}
+.mc p{margin-bottom:15px;line-height:1.6}
+.mc ul{list-style-type:disc;margin-left:20px;padding-left:0}
+.mc li{margin-bottom:5px}
+.mc button{display:block;margin:20px auto 0;background-color:#007bff;color:#fff;padding:10px 25px;border:none;border-radius:8px;cursor:pointer;font-size:1.1em;box-shadow:0 4px 6px rgba(0,0,0,.1);transition:background-color .3s ease,transform .1s ease}
+.mc button:hover{background-color:#0056b3;transform:translateY(-2px)}
+.mc button:active{transform:translateY(0);box-shadow:0 2px 4px rgba(0,0,0,.1)}
+#scm{text-align:center}
+
+/* Aperture effect for high speed */
+#aperture {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 5;
+    pointer-events: none;
+    transition: background 0.1s ease;
+}
+
+#aperture.aperture-hidden {
+    opacity: 0;
+}
+</style>
+</head>
+<body>
+<div id="wm">Welcome! Click here to open the Menu!</div>
+<div id="sc">Skits Down: 0</div>
+<div id="st">
+    <div id="spc">Speed: 0.00 m/s</div>
+    <div id="hpc">Height: 0.00 m</div>
+    <div id="dsc">Distance: 0.00 m</div>
+</div>
+<div id="ctrls"><button id="mb">Menu</button></div>
+<div id="mn">
+<button id="hpb">How to Play</button>
+<button id="trb">Toggle Rocks</button>
+<button id="tcb">Toggle Camera</button>
+<button id="rgb">Reset Game</button>
+<button id="ab">About</button>
+<button id="cmb">Close Menu</button>
+</div>
+<div id="hpm" class="modal">
+<div class="mc">
+<h3>How to Play</h3>
+<p><strong>Throwing the Ball:</strong><br>
+<strong>Mouse/Touchpad:</strong> Left-click and drag to aim, release to throw.<br>
+<strong>Mobile Touch:</strong> Touch, drag, and release to throw.</p>
+<p><strong>Camera Controls:</strong><br>
+<strong>Mouse/Touchpad:</strong> Right-click and drag to rotate the camera. Use the scroll wheel to zoom in and out.<br>
+<strong>Mobile Touch:</strong> Use two fingers to drag and rotate the camera. Pinch to zoom.</p>
+<p><strong>Keyboard Controls:</strong><ul>
+<li><strong>Spacebar:</strong> Resets the ball and skits to their starting positions.</li>
+<li><strong>Up Arrow (&#8593;):</strong> Throws the ball forward from its current position.</li>
+<li><strong>Left Arrow (&#8592;):</strong> Nudges the ball slightly to the left.</li>
+<li><strong>Right Arrow (&#8594;):</strong> Nudges the ball slightly to the right.</li>
+</ul></p>
+<button id="chpb">Got It!</button>
+</div>
+</div>
+<div id="am" class="modal">
+<div class="mc">
+<h3>About</h3><p>A simple bowling-like game made with Three.js and Cannon.js.</p><button id="cab">Close</button>
+</div>
+</div>
+<div id="scm" class="modal">
+    <div class="mc">
+        <h3>Game Over!</h3>
+        <p>Your Final Score: <span id="fsc">0</span> Skits Down.</p>
+        <button id="pab">Play Again!</button>
+    </div>
+</div>
+<div id="aperture"></div>
+<canvas id="cv" tabindex="0"></canvas>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+let s, c, r, oc, w, bm, bb, sm = [], sb = [], lm, lb, rc = new THREE.Raycaster();
+let isD = false, dps = [], sdc = 0, bS = true, tB = false, isI = false;
+let bcp, bc, ac, tcb, isBCA = false, isDCam = false, lpx = 0, lpy = 0, cY = 0, cP = 0, ipd = 0;
+let isCMA = false, cst = 0, msp = new THREE.Vector3(), mtp = new THREE.Vector3(0, 5, 0);
+const iBP = new THREE.Vector3(0, .25, 0), SKH = 1, SKRT = .08, SKRB = .12, TS = 10, TCX = 50, TCZ = 50, RSC = 0.1;
+const PR = (TCX / 2) * TS;
+let gTs = [];
+const pmb = new CANNON.Material(), pms = new CANNON.Material(), pmt = new CANNON.Material(), pmRk = new CANNON.Material(), pmg = new CANNON.Material();
+const byId = id => document.getElementById(id);
+const on = (el, ev, fn, o=false) => el.addEventListener(ev, fn, o);
+let isStopped = false, stopTimer = 0, scoreSaved = false;
+let totalDistance = 0, throwStartPosition = new CANNON.Vec3();
+
+
+const maxTrailPoints = 500;
+const sparkleCount = 15;
+let trailPositions = [], trail, sparkleParticles, sparkleGeometry, sparkleMaterial;
+let isTrailActive = false;
+const TRAIL_FADE_SPEED = 0.5;
+const VIGNETTE_START_SPEED = 30;
+
+function saveScore() {
+    scoreSaved = true;
+    byId('fsc').innerText = sdc;
+    shM('scm');
+}
+function tglM() { byId('mn').classList.toggle('active'); }
+function shM(m) { byId(m).classList.add('active'); byId('mn').classList.remove('active'); }
+function hM(m) { byId(m).classList.remove('active'); }
+function tglRV() { if (rMdl) rMdl.tglV(); }
+const rMdl = {
+    p: [],
+    init(scene, world) { this.s = scene; this.w = world; this.p = []; },
+    cr(isInit=false) {
+        let m, b, h, w, d, rad;
+        const mat = new THREE.MeshStandardMaterial({ color: 0x696969, transparent: true, opacity: 1 });
+        const sc = Math.random() * 4.5 + 0.5;
+        h = sc * (Math.random() * 1.5 + 1);
+        if (Math.random() < .5) {
+            w = sc * 2; d = sc * 2;
+            m = new THREE.Mesh(new THREE.BoxGeometry(w, h * .5, d), mat);
+            b = new CANNON.Body({ mass: 0, material: pmRk });
+            b.addShape(new CANNON.Box(new CANNON.Vec3(w / 2, h * .25, d / 2)));
+        } else {
+            rad = sc * 1.2;
+            m = new THREE.Mesh(new THREE.ConeGeometry(rad, h, 4), mat);
+            b = new CANNON.Body({ mass: 0, material: pmRk });
+            b.addShape(new CANNON.Cylinder(.001, rad, h, 4));
+        }
+        m.castShadow = true; m.receiveShadow = true;
+        this.s.add(m); this.w.addBody(b);
+        m.rotation.set((Math.random() * Math.PI / 6) * (Math.random() > .5 ? 1 : -1), Math.random() * Math.PI * 2, 0);
+        const o = { m, b, ap: isInit ? 1 : 0, isAi: !isInit, isAo: false, s: new THREE.Vector3(1, 1, 1), o: 1, active: isInit };
+        if (isInit) {
+            m.scale.copy(o.s); m.material.opacity = o.o; m.visible = true; b.collisionResponse = true; b.wakeUp();
+        } else {
+            m.scale.set(0.05, 0.05, 0.05); m.material.opacity = 0.05; m.visible = true; b.collisionResponse = false; b.sleep();
+        }
+        this.p.push(o); return o;
+    },
+    upd(ballBody) {
+        const ballVel = ballBody.velocity;
+        const ballPos = ballBody.position;
+
+        this.p.forEach(o => {
+            if (o.isAi || o.isAo) {
+                let animSpeed = o.isAi ? 0.015 : -0.02;
+
+               
+                if (o.isAi && ballVel.lengthSquared() > 1) {
+                    const rockPos = o.b.position;
+                    const toRock = new CANNON.Vec3();
+                    rockPos.vsub(ballPos, toRock);
+                    
+                    const ballDir = ballVel.clone().unit();
+                    
+                    if (ballDir.dot(toRock.unit()) > 0.5) {
+                       animSpeed = 0.05;
+                    }
+                }
+
+                o.ap += animSpeed;
+                o.ap = Math.max(0, Math.min(1, o.ap));
+                const sc = THREE.MathUtils.lerp(0.05, o.s.x, o.ap);
+                o.m.scale.set(sc, sc, sc);
+                o.m.material.opacity = THREE.MathUtils.lerp(0.05, 1, o.ap);
+                o.m.visible = o.ap > 0;
+
+                if (o.isAi && o.ap >= 1) {
+                    o.isAi = false; o.active = true; o.b.collisionResponse = true; o.b.wakeUp();
+                } else if (o.isAo && o.ap <= 0) {
+                    o.isAo = false;
+                }
+            }
+            if (o.b && o.active) { o.b.position.copy(o.m.position); o.b.quaternion.copy(o.m.quaternion); }
+        });
+    },
+    get() {
+        const o = this.p.find(obj => !obj.active && !obj.isAi && !obj.isAo);
+        return o ? o : this.cr(false);
+    },
+    release(o) {
+        if (o.active) {
+            o.isAo = true; o.active = false; o.b.collisionResponse = false; o.b.sleep();
+        }
+    },
+    tglV() { this.p.forEach(o => { o.m.visible = !o.m.visible; if (o.b) o.b.collisionResponse = o.m.visible; }); },
+    disp() { this.p.forEach(o => { this.s.remove(o.m); o.m.geometry.dispose(); o.m.material.dispose(); if (o.b) this.w.removeBody(o.b); }); this.p = []; }
+};
+function reset() {
+    bb.position.copy(iBP); bm.position.copy(iBP);
+    bb.velocity.set(0, 0, 0); bb.angularVelocity.set(0, 0, 0);
+    bb.type = CANNON.Body.DYNAMIC; bb.allowSleep = false;
+    isD = false; oc.enabled = true;
+    const p = [{ x: 0, z: -8 }, { x: -0.25, z: -8.5 }, { x: 0.25, z: -8.5 }, { x: -0.5, z: -9 }, { x: 0, z: -9 }, { x: 0.5, z: -9 }, { x: -0.75, z: -9.5 }, { x: -0.25, z: -9.5 }, { x: 0.25, z: -9.5 }, { x: 0.75, z: -9.5 }];
+    sb.forEach((b, i) => { b.position.set(p[i].x, .2 + SKH / 2, p[i].z); b.quaternion.set(0, 0, 0, 1); b.velocity.set(0, 0, 0); b.angularVelocity.set(0, 0, 0); b.sleep(); });
+    sm.forEach((m, i) => { m.position.set(p[i].x, .2 + SKH / 2, p[i].z); m.rotation.set(0, 0, 0); });
+    sdc = 0; byId('sc').innerText = `Skits Down: ${sdc}`;
+    bS = true; tB = false;
+    bcp.position.copy(iBP); cY = 0; cP = 0; bcp.rotation.set(0, 0, 0);
+    bc.position.set(0, 5, 15); bc.lookAt(bcp.position);
+    isBCA = false; ac = c; oc.enabled = true; tcb.innerText = "Toggle Camera (Main)";
+    isCMA = false; c.position.set(0, 10, 25); oc.target.set(0, 1, 0); oc.update();
+    rMdl.disp(); createGround(); createRocks();
+    hM('scm');
+    isStopped = false;
+    stopTimer = 0;
+    scoreSaved = false;
+    totalDistance = 0;
+    throwStartPosition.copy(iBP);
+    byId('dsc').innerText = `Distance: 0.00 m`;
+
+   
+    trailPositions = [];
+    trail.geometry.setDrawRange(0, 0);
+    trail.visible = false;
+    isTrailActive = false;
+    sparkleParticles.visible = false;
+    byId('aperture').style.background = 'none';
+}
+function chkSD() {
+    let fc = 0; const th = Math.cos(Math.PI / 4);
+    sb.forEach(b => { const uv = new CANNON.Vec3(0, 1, 0); if (b.quaternion.vmult(uv).dot(uv) < th) fc++; });
+    if (fc !== sdc) { sdc = fc; byId('sc').innerText = `Skits Down: ${sdc}`; }
+}
+function onRsz() { c.aspect = bc.aspect = window.innerWidth / window.innerHeight; c.updateProjectionMatrix(); bc.updateProjectionMatrix(); r.setSize(window.innerWidth, window.innerHeight); }
+function pDown(e) {
+    if (e.target !== byId('cv')) return;
+    const isT = e.type === 'touchstart';
+    if (isBCA) {
+        if (isT && e.touches.length === 2) {
+            ipd = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+            isDCam = false;
+        } else if ((!isT && e.button === 0) || (isT && e.touches.length === 1)) {
+            isDCam = true;
+            lpx = isT ? e.touches[0].clientX : e.clientX;
+            lpy = isT ? e.touches[0].clientY : e.clientY;
+        }
+    } else if ((!isT && e.button === 0) || (isT && e.touches.length === 1)) {
+        isD = true;
+        oc.enabled = false;
+        dps = [];
+        const cX = isT ? e.touches[0].clientX : e.clientX;
+        const cY = isT ? e.touches[0].clientY : e.clientY;
+        dps.push({ p: new THREE.Vector2((cX / window.innerWidth) * 2 - 1, -(cY / window.innerHeight) * 2 + 1), t: performance.now() });
+        bb.position.copy(iBP);
+        bm.position.copy(iBP);
+        bb.velocity.set(0, 0, 0);
+        bb.angularVelocity.set(0, 0, 0);
+        bb.type = CANNON.Body.KINEMATIC;
+        bS = false;
+    }
+    e.preventDefault();
+}
+function pMove(e) {
+    if (e.target !== byId('cv')) return;
+    const isT = e.type === 'touchmove';
+    const cX = isT ? e.touches[0].clientX : e.clientX;
+    const local_cY = isT ? e.touches[0].clientY : e.clientY;
+    if (isBCA) {
+        if (isT && e.touches.length === 2) {
+            const cpd = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+            bc.position.z -= (cpd - ipd) * 0.05;
+            bc.position.z = Math.max(5, Math.min(25, bc.position.z));
+            ipd = cpd;
+        } else if (isDCam) {
+            cY -= (cX - lpx) * 0.005;
+            cP -= (local_cY - lpy) * 0.005;
+            cP = Math.max(-Math.PI / 4, Math.min(Math.PI / 4, cP));
+            lpx = cX;
+            lpy = local_cY;
+        }
+    } else if (isD) {
+        const mp = new THREE.Vector2((cX / window.innerWidth) * 2 - 1, -(local_cY / window.innerHeight) * 2 + 1);
+        dps.push({ p: mp.clone(), t: performance.now() });
+        if (dps.length > 20) dps.shift();
+        rc.setFromCamera(mp, c);
+        const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -(lm.position.y + .25));
+        const iPt = new THREE.Vector3();
+        rc.ray.intersectPlane(plane, iPt);
+        if (iPt) {
+            bm.position.copy(iPt);
+            bb.position.copy(iPt);
+        }
+    }
+    e.preventDefault();
+}
+function pUp(e) {
+    if (e.target !== byId('cv')) return;
+    isDCam = false;
+    const isT = e.type === 'touchend';
+    if (!isBCA && isD) {
+        if ((isT && e.changedTouches.length > 0) || (!isT && e.button === 0)) {
+            isD = false;
+            oc.enabled = true;
+            bb.type = CANNON.Body.DYNAMIC;
+            if (dps.length > 1) {
+                const end = dps[dps.length - 1];
+                const start = dps[Math.max(0, dps.length - 5)];
+                const dV = new THREE.Vector2().subVectors(end.p, start.p);
+                if (dV.length() > 0.03) {
+                    if (dV.y < 0 && Math.abs(dV.y) < 0.1) dV.y = -0.1;
+                    const dDur = Math.max(1, end.t - start.t) / 1000;
+                    const vm = dV.length() / dDur;
+                   
+                    const hfs = 120;
+                    const ffs = isT ? 500 : 750;
+                    bb.applyImpulse(new CANNON.Vec3(dV.x * hfs * vm, 0, -dV.y * ffs * vm), bb.position);
+                    throwStartPosition.copy(bb.position); // Set starting point for distance calc
+                    tB = true; // Start tracking distance and game state
+                    if (isT) {
+                        tglCam();
+                    } else {
+                        isCMA = true;
+                        cst = performance.now();
+                        msp.copy(c.position);
+                    }
+                }
+            }
+        }
+    }
+    dps = [];
+    e.preventDefault();
+}
+function onKD(e) {
+    const nf = .05, tf = 150;
+    switch (e.code) {
+        case 'Space': reset(); break;
+        case 'ArrowUp': 
+            bb.type = CANNON.Body.DYNAMIC; 
+            bb.applyImpulse(new CANNON.Vec3(0, 0, -tf), bb.position); 
+            throwStartPosition.copy(bb.position); // Set starting point for distance calc
+            tB = true; // Also start tracking for keyboard throw
+            break;
+        case 'ArrowLeft': bb.applyImpulse(new CANNON.Vec3(-nf, 0, 0), bb.position); break;
+        case 'ArrowRight': bb.applyImpulse(new CANNON.Vec3(nf, 0, 0), bb.position); break;
+    }
+}
+function tglCam() {
+    isBCA = !isBCA;
+    ac = isBCA ? bc : c;
+    oc.enabled = !isBCA;
+    tcb.innerText = `Toggle Camera (${isBCA ? "Ball" : "Main"})`;
+    if (isBCA) {
+        bcp.position.copy(bm.position);
+        cY = 0; cP = 0; bcp.rotation.set(0, 0, 0); bc.position.set(0, 5, 15); bc.lookAt(bcp.position);
+    }
+}
+function createGround() {
+    gTs.forEach(t => { s.remove(t.m); w.removeBody(t.b); t.m.geometry.dispose(); t.m.material.dispose(); });
+    gTs = [];
+    const m1 = new THREE.MeshStandardMaterial({ color: 0x228b22 }), m2 = new THREE.MeshStandardMaterial({ color: 0x3cb371 });
+    const g = new THREE.PlaneGeometry(TS, TS), sx = iBP.x - (TCX / 2) * TS, sz = iBP.z - (TCZ / 2) * TS;
+    for (let i = 0; i < TCX; i++) for (let j = 0; j < TCZ; j++) {
+        const m = new THREE.Mesh(g, (i + j) % 2 === 0 ? m1 : m2);
+        m.rotation.x = -Math.PI / 2; m.receiveShadow = true;
+        const b = new CANNON.Body({ mass: 0, material: pmg });
+        b.addShape(new CANNON.Plane()); b.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
+        const x = sx + i * TS + TS / 2, z = sz + j * TS + TS / 2;
+        m.position.set(x, 0, z); b.position.copy(m.position);
+        s.add(m); w.addBody(b); gTs.push({ m, b });
+    }
+}
+function updateGround() {
+    const bx = bb.position.x, bz = bb.position.z, hx = TCX / 2, hz = TCZ / 2, wx = hx * TS, wz = hz * TS;
+    gTs.forEach(t => {
+        const oldPos = t.m.position.clone();
+        let moved = false;
+        if (t.m.position.z < bz - wz) { t.m.position.z += TCZ * TS; moved = true; }
+        else if (t.m.position.z > bz + wz) { t.m.position.z -= TCZ * TS; moved = true; }
+        if (t.m.position.x < bx - wx) { t.m.position.x += TCX * TS; moved = true; }
+        else if (t.m.position.x > bx + wx) { t.m.position.x -= TCX * TS; moved = true; }
+        if (moved) {
+            const halfTS = TS / 2;
+            rMdl.p.forEach(rock => {
+                if (rock.active) {
+                    const rp = rock.m.position;
+                    if (rp.x > oldPos.x - halfTS && rp.x < oldPos.x + halfTS && rp.z > oldPos.z - halfTS && rp.z < oldPos.z + halfTS) {
+                        rMdl.release(rock);
+                    }
+                }
+            });
+            t.b.position.copy(t.m.position);
+            if (Math.random() < RSC) {
+                const rk = rMdl.get();
+                if (rk) {
+                    const h = (rk.m.geometry.parameters.height || rk.m.geometry.parameters.radius * 2 || 2) / 2;
+                    rk.m.position.set(t.m.position.x + (Math.random() - .5) * TS, h, t.m.position.z + (Math.random() - .5) * TS);
+                    rk.b.position.copy(rk.m.position);
+                    rk.m.rotation.set((Math.random()*Math.PI/6)*(Math.random()>.5?1:-1), Math.random()*Math.PI*2, 0);
+                    rk.b.quaternion.copy(rk.m.quaternion);
+                    rk.b.velocity.set(0,0,0); rk.b.angularVelocity.set(0,0,0);
+                    rk.isAi = true;
+                    rk.ap = 0;
+                }
+            }
+        }
+    });
+}
+function cullObjects() {
+    const ballPos = bb.position;
+    const PR_SQR = PR * PR;
+    gTs.forEach(t => {
+        const isVisible = t.m.position.distanceToSquared(new THREE.Vector3(ballPos.x, ballPos.y, ballPos.z)) < PR_SQR;
+        if (t.m.visible !== isVisible) {
+            t.m.visible = isVisible;
+            t.b.collisionResponse = isVisible;
+            if (!isVisible) {
+                const halfTS = TS / 2;
+                rMdl.p.forEach(rock => {
+                    if (rock.active) {
+                        const rp = rock.m.position;
+                        if (rp.x > t.m.position.x - halfTS && rp.x < t.m.position.x + halfTS && rp.z > t.m.position.z - halfTS && rp.z < t.m.position.z + halfTS) {
+                            rMdl.release(rock);
+                        }
+                    }
+                });
+            }
+        }
+    });
+}
+function cullRocks() {
+    const ballPos = bb.position;
+    const PR_SQR = PR * PR;
+    rMdl.p.forEach(rock => {
+        if (rock.active && rock.m.position.distanceToSquared(new THREE.Vector3(ballPos.x, ballPos.y, ballPos.z)) > PR_SQR) {
+            rMdl.release(rock);
+        }
+    });
+}
+function createRocks() {
+    rMdl.init(s, w);
+    const center = new THREE.Vector3(0, 0, 0);
+    gTs.forEach(t => {
+        if (t.m.position.distanceTo(center) < PR) {
+            if (Math.random() < RSC) {
+                const rk = rMdl.cr(true);
+                const h = (rk.m.geometry.parameters.height || rk.m.geometry.parameters.radius * 2 || 2) / 2;
+                rk.m.position.set(t.m.position.x + (Math.random() - .5) * TS, h, t.m.position.z + (Math.random() - .5) * TS);
+                rk.b.position.copy(rk.m.position);
+                rk.m.rotation.set((Math.random() * Math.PI / 6) * (Math.random() > .5 ? 1 : -1), Math.random() * Math.PI * 2, 0);
+                rk.b.quaternion.copy(rk.m.quaternion);
+            }
+        }
+    });
+}
+function createDiamondTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 64;
+    canvas.height = 64;
+    const context = canvas.getContext('2d');
+    context.beginPath();
+    context.moveTo(32, 0);
+    context.lineTo(64, 32);
+    context.lineTo(32, 64);
+    context.lineTo(0, 32);
+    context.closePath();
+    context.fillStyle = '#ffe88a';
+    context.fill();
+    return new THREE.CanvasTexture(canvas);
+}
+function init() {
+    if (isI) return; isI = true;
+    const cv = byId('cv');
+    tcb = byId('tcb');
+    on(byId('mb'), 'click', tglM); on(byId('cmb'), 'click', tglM);
+    on(byId('hpb'), 'click', () => shM('hpm')); on(byId('chpb'), 'click', () => hM('hpm'));
+    on(byId('ab'), 'click', () => shM('am')); on(byId('cab'), 'click', () => hM('am'));
+    on(byId('trb'), 'click', tglRV); on(byId('rgb'), 'click', () => { reset(); tglM(); });
+    on(byId('wm'), 'click', tglM); on(tcb, 'click', tglCam);
+    on(byId('pab'), 'click', () => { reset(); });
+    on(cv, 'mousedown', pDown); on(cv, 'mousemove', pMove); on(cv, 'mouseup', pUp);
+    on(cv, 'touchstart', pDown, {passive:false}); on(cv, 'touchmove', pMove, {passive:false}); on(cv, 'touchend', pUp, {passive:false});
+    on(cv, 'wheel', e => { if(isBCA) { e.preventDefault(); bc.position.z += e.deltaY * 0.05; bc.position.z = Math.max(5, Math.min(25, bc.position.z)); } }, {passive:false});
+    on(cv, 'contextmenu', e => e.preventDefault()); on(document, 'keydown', onKD);
+    cv.focus();
+    s = new THREE.Scene(); s.background = new THREE.Color(0x87ceeb);
+    c = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, .1, 1000); c.position.set(0, 10, 25);
+    bc = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    bcp = new THREE.Object3D(); bcp.add(bc); s.add(bcp); ac = c;
+    r = new THREE.WebGLRenderer({ antialias: true, canvas: cv }); r.shadowMap.enabled = true;
+    oc = new THREE.OrbitControls(c, r.domElement); oc.enableDamping = true; oc.dampingFactor = .05; oc.target.set(0, 1, 0); oc.mouseButtons = { RIGHT: THREE.MOUSE.ROTATE }; oc.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
+    s.add(new THREE.AmbientLight(0xffffff, .6));
+    const dl = new THREE.DirectionalLight(0xffffff, .8); dl.position.set(5, 10, 5); dl.castShadow = true;
+    dl.shadow.mapSize.set(2048, 2048); dl.shadow.camera.near = .5; dl.shadow.camera.far = 50;
+    dl.shadow.camera.left = dl.shadow.camera.bottom = -10; dl.shadow.camera.right = dl.shadow.camera.top = 10; s.add(dl);
+    w = new CANNON.World(); w.gravity.set(0, -9.82, 0); w.broadphase = new CANNON.SAPBroadphase(w); w.allowSleep = true;
+    const lh = .2;
+    lm = new THREE.Mesh(new THREE.BoxGeometry(3, lh, 20), new THREE.MeshStandardMaterial({ color: 0x8B4513 })); lm.position.set(0, lh/2, -5); lm.receiveShadow = true; s.add(lm);
+    lb = new CANNON.Body({ mass: 0, material: pmt }); lb.addShape(new CANNON.Box(new CANNON.Vec3(1.5, lh/2, 10))); lb.position.copy(lm.position); w.addBody(lb);
+    const br = .25;
+    bm = new THREE.Mesh(new THREE.SphereGeometry(br, 32, 32), new THREE.MeshStandardMaterial({ color: 0x0000ff })); bm.position.copy(iBP); bm.castShadow = true; s.add(bm);
+    bb = new CANNON.Body({ mass: 5, material: pmb, linearDamping: 0.1, angularDamping: 0.1, allowSleep: false }); bb.addShape(new CANNON.Sphere(br)); bb.position.copy(bm.position); w.addBody(bb);
+    const cs = (x, z) => {
+        const m = new THREE.Mesh(new THREE.CylinderGeometry(SKRT, SKRB, SKH, 16), new THREE.MeshStandardMaterial({ color: 0xffffff }));
+        m.position.set(x, lh + SKH / 2, z);
+        m.castShadow = true; m.receiveShadow = true; s.add(m); sm.push(m);
+        const b = new CANNON.Body({ mass: .5, material: pms, angularDamping: 0.2 });
+        b.addShape(new CANNON.Cylinder(SKRT, SKRB, SKH, 16), new CANNON.Vec3(), new CANNON.Quaternion().setFromAxisAngle(new CANNON.Vec3(1,0,0), Math.PI/2));
+        b.position.copy(m.position); w.addBody(b); sb.push(b);
+    };
+    const p = [{ x: 0, z: -8 }, { x: -0.25, z: -8.5 }, { x: 0.25, z: -8.5 }, { x: -0.5, z: -9 }, { x: 0, z: -9 }, { x: 0.5, z: -9 }, { x: -0.75, z: -9.5 }, { x: -0.25, z: -9.5 }, { x: 0.25, z: -9.5 }, { x: 0.75, z: -9.5 }];
+    p.forEach(pos => cs(pos.x, pos.z));
+    
+   
+    const trailGeometry = new THREE.BufferGeometry();
+    const positions = new Float32Array(maxTrailPoints * 3);
+    const colors = new Float32Array(maxTrailPoints * 3);
+    trailGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3).setUsage(THREE.DynamicDrawUsage));
+    trailGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3).setUsage(THREE.DynamicDrawUsage));
+    const trailMaterial = new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 1, blending: THREE.AdditiveBlending });
+    trail = new THREE.Line(trailGeometry, trailMaterial);
+    trail.visible = false;
+    trail.frustumCulled = false;
+    s.add(trail);
+
+   
+    sparkleGeometry = new THREE.BufferGeometry();
+    const sparklePositions = new Float32Array(sparkleCount * 3);
+    sparkleGeometry.setAttribute('position', new THREE.BufferAttribute(sparklePositions, 3));
+    sparkleMaterial = new THREE.PointsMaterial({
+        size: 0.25,
+        map: createDiamondTexture(),
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        sizeAttenuation: true,
+        alphaTest: 0.5
+    });
+    sparkleParticles = new THREE.Points(sparkleGeometry, sparkleMaterial);
+    sparkleParticles.visible = false;
+    sparkleParticles.frustumCulled = false;
+    s.add(sparkleParticles);
+
+    reset();
+    w.addContactMaterial(new CANNON.ContactMaterial(pmb, pmt, { friction: .01, restitution: .6 }));
+    w.addContactMaterial(new CANNON.ContactMaterial(pmb, pms, { friction: .01, restitution: .3 }));
+    w.addContactMaterial(new CANNON.ContactMaterial(pms, pmt, { friction: .8, restitution: .1 }));
+    w.addContactMaterial(new CANNON.ContactMaterial(pmb, pmRk, { friction: .8, restitution: .1 }));
+    w.addContactMaterial(new CANNON.ContactMaterial(pmb, pmg, { friction: 0.1, restitution: 0.5 }));
+    on(window, 'resize', onRsz, false); onRsz();
+}
+function loop() {
+    requestAnimationFrame(loop);
+    if (!isI) return;
+    
+   
+    w.step(1/60, undefined, 10);
+    
+    bm.position.copy(bb.position); bm.quaternion.copy(bb.quaternion);
+    sm.forEach((m,i) => { m.position.copy(sb[i].position); m.quaternion.copy(sb[i].quaternion); });
+    chkSD();
+    if (isCMA) {
+        let t = Math.min(1, (performance.now() - cst) / 1000);
+        c.position.lerpVectors(msp, mtp, t); oc.target.copy(bm.position); oc.update();
+        if (t >= 1) { isCMA = false; tglCam(); }
+    } else if (isBCA) {
+        bcp.position.copy(bm.position); bcp.rotation.y = cY;
+        const tempCamPos = new THREE.Vector3(0, 5, bc.position.z).applyAxisAngle(new THREE.Vector3(1,0,0), cP);
+        bc.position.copy(tempCamPos);
+        bc.lookAt(bcp.position);
+    } else oc.update();
+    rMdl.upd(bb);
+    updateGround();
+    cullObjects();
+    cullRocks();
+    r.render(s, ac);
+    const speed = bb.velocity.length();
+    byId('spc').innerText = `Speed: ${speed.toFixed(2)} m/s`;
+    byId('hpc').innerText = `Height: ${(bb.position.y - .25).toFixed(2)} m`;
+    
+    if (tB) {
+      totalDistance = bb.position.distance(throwStartPosition);
+    }
+    byId('dsc').innerText = `Distance: ${totalDistance.toFixed(2)} m`;
+
+
+    byId('aperture').style.background = 'none';
+
+    if (tB && speed > 1.0) {
+        isTrailActive = true;
+        trailPositions.unshift(bm.position.clone());
+        const trailLength = Math.floor(Math.min(1, (speed - 1) / 100) * (maxTrailPoints - 20) + 20);
+        if (trailPositions.length > trailLength) {
+            trailPositions.pop();
+        }
+    }
+
+    if (isTrailActive) {
+        trail.visible = true;
+        const positions = trail.geometry.attributes.position.array;
+        const colors = trail.geometry.attributes.color.array;
+        
+        let opacityFactor = 1.0;
+        if (speed < TRAIL_FADE_SPEED) {
+            opacityFactor = Math.max(0, speed / TRAIL_FADE_SPEED);
+        } else if (speed < 1.0) {
+            opacityFactor = Math.min(1, speed / 1.0);
+        }
+
+        for (let i = 0; i < trailPositions.length; i++) {
+            const p = trailPositions[i];
+            positions[i * 3] = p.x;
+            positions[i * 3 + 1] = p.y;
+            positions[i * 3 + 2] = p.z;
+            
+            const color = new THREE.Color(0x0000ff);
+            const intensity = (trailPositions.length - i) / trailPositions.length;
+            color.lerp(new THREE.Color(0x00ffff), intensity);
+            colors[i * 3] = color.r;
+            colors[i * 3 + 1] = color.g;
+            colors[i * 3 + 2] = color.b;
+        }
+
+        trail.material.opacity = 0.5 + 0.5 * opacityFactor;
+        trail.geometry.setDrawRange(0, trailPositions.length);
+        trail.geometry.attributes.position.needsUpdate = true;
+        trail.geometry.attributes.color.needsUpdate = true;
+
+        if (speed < 0.2 && trail.material.opacity < 0.1) {
+            isTrailActive = false;
+            trailPositions = [];
+            trail.visible = false;
+        }
+    } else {
+        trail.visible = false;
+        trailPositions = [];
+    }
+
+   
+    if (tB && speed > 25) {
+        sparkleParticles.visible = true;
+        const speedFactor = Math.min(1, (speed - 25) / 125);
+        sparkleMaterial.size = 0.1 + speedFactor * 0.15;
+        sparkleMaterial.opacity = 0.5 + speedFactor * 0.5;
+
+        const numParticles = Math.floor(3 + speedFactor * (sparkleCount - 3));
+
+        const positions = sparkleGeometry.attributes.position.array;
+
+        const direction = new THREE.Vector3(bb.velocity.x, bb.velocity.y, bb.velocity.z).normalize();
+        
+        const forwardOffset = 2.5;
+        const sparkleCenter = new THREE.Vector3().copy(bm.position).add(direction.multiplyScalar(forwardOffset));
+        
+        const spread = 1.5 * speedFactor;
+
+        for (let i = 0; i < numParticles; i++) {
+            const index = i * 3;
+            positions[index] = sparkleCenter.x + (Math.random() - 0.5) * spread;
+            positions[index + 1] = sparkleCenter.y + (Math.random() - 0.5) * spread;
+            positions[index + 2] = sparkleCenter.z + (Math.random() - 0.5) * spread;
+        }
+        sparkleGeometry.setDrawRange(0, numParticles);
+        sparkleGeometry.attributes.position.needsUpdate = true;
+    } else {
+        sparkleParticles.visible = false;
+    }
+
+   
+    if (isBCA && speed > VIGNETTE_START_SPEED) {
+        const speedFactor = (speed - VIGNETTE_START_SPEED) / 100;
+        const startStop = Math.max(0, 50 - speedFactor * 45);
+        const opacity = Math.min(1, 0.6 + speedFactor * 0.4);
+        byId('aperture').style.background = `radial-gradient(circle at center, transparent ${startStop}%, rgba(0, 0, 0, ${opacity}) 100%)`;
+    }
+
+    if (tB && speed < 0.01 && bb.angularVelocity.length() < 0.01) {
+        if (!isStopped) {
+            isStopped = true;
+            stopTimer = performance.now();
+        } else if (performance.now() - stopTimer > 3000 && !scoreSaved) {
+            saveScore();
+        }
+    } else {
+        isStopped = false;
+        stopTimer = 0;
+    }
+}
+document.addEventListener('DOMContentLoaded', () => { init(); loop(); });
+</script>
+</body>
+</html>\
