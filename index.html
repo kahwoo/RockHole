@@ -115,7 +115,8 @@ const pmb = new CANNON.Material(), pms = new CANNON.Material(), pmt = new CANNON
 const byId = id => document.getElementById(id);
 const on = (el, ev, fn, o=false) => el.addEventListener(ev, fn, o);
 let isStopped = false, stopTimer = 0, scoreSaved = false;
-let totalDistance = 0, lastPosition = new CANNON.Vec3();
+let totalDistance = 0, throwStartPosition = new CANNON.Vec3();
+let autoCameraSwitched = false;
 
 
 const maxTrailPoints = 500;
@@ -233,8 +234,9 @@ function reset() {
     stopTimer = 0;
     scoreSaved = false;
     totalDistance = 0;
-    lastPosition.copy(iBP);
+    throwStartPosition.copy(iBP);
     byId('dsc').innerText = `Distance: 0.00 m`;
+    autoCameraSwitched = false;
 
    
     trailPositions = [];
@@ -332,7 +334,7 @@ function pUp(e) {
                     const hfs = 120;
                     const ffs = isT ? 500 : 750;
                     bb.applyImpulse(new CANNON.Vec3(dV.x * hfs * vm, 0, -dV.y * ffs * vm), bb.position);
-                    lastPosition.copy(bb.position); // Set starting point for distance calc
+                    throwStartPosition.copy(bb.position); // Set starting point for distance calc
                     tB = true; // Start tracking distance and game state
                     if (isT) {
                         tglCam();
@@ -355,7 +357,7 @@ function onKD(e) {
         case 'ArrowUp': 
             bb.type = CANNON.Body.DYNAMIC; 
             bb.applyImpulse(new CANNON.Vec3(0, 0, -tf), bb.position); 
-            lastPosition.copy(bb.position); // Set starting point for distance calc
+            throwStartPosition.copy(bb.position); // Set starting point for distance calc
             tB = true; // Also start tracking for keyboard throw
             break;
         case 'ArrowLeft': bb.applyImpulse(new CANNON.Vec3(-nf, 0, 0), bb.position); break;
@@ -371,6 +373,8 @@ function tglCam() {
         bcp.position.copy(bm.position);
         cY = 0; cP = 0; bcp.rotation.set(0, 0, 0); bc.position.set(0, 5, 15); bc.lookAt(bcp.position);
     }
+    // Reset auto-switch flag when manually toggled
+    autoCameraSwitched = false;
 }
 function createGround() {
     gTs.forEach(t => { s.remove(t.m); w.removeBody(t.b); t.m.geometry.dispose(); t.m.material.dispose(); });
@@ -594,12 +598,59 @@ function loop() {
     byId('spc').innerText = `Speed: ${speed.toFixed(2)} m/s`;
     byId('hpc').innerText = `Height: ${(bb.position.y - .25).toFixed(2)} m`;
     
-    const currentPosition = bb.position;
-    if (tB) {
-      const distanceThisFrame = currentPosition.distance(lastPosition);
-      totalDistance += distanceThisFrame;
+    // Auto-switch to ball camera when speed exceeds 100 m/s
+    if (tB && speed > 100 && !isBCA) {
+        tglCam();
+        autoCameraSwitched = true;
+        // Show notification for auto camera switch
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 255, 255, 0.9);
+            color: #000;
+            padding: 15px 25px;
+            border-radius: 10px;
+            font-size: 1.2em;
+            font-weight: bold;
+            z-index: 100;
+            pointer-events: none;
+            animation: fadeOut 2s forwards;
+        `;
+        notification.textContent = '🚀 Ball Camera Activated!';
+        document.body.appendChild(notification);
+        
+        // Add CSS animation
+        if (!document.querySelector('#auto-camera-style')) {
+            const style = document.createElement('style');
+            style.id = 'auto-camera-style';
+            style.textContent = `
+                @keyframes fadeOut {
+                    0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+                    70% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+                    100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        // Remove notification after animation
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 2000);
     }
-    lastPosition.copy(currentPosition);
+    
+    if (tB) {
+      // Calculate distance manually since CANNON.Vec3 doesn't have a distance method
+      const dx = bb.position.x - throwStartPosition.x;
+      const dy = bb.position.y - throwStartPosition.y;
+      const dz = bb.position.z - throwStartPosition.z;
+      totalDistance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+    }
     byId('dsc').innerText = `Distance: ${totalDistance.toFixed(2)} m`;
 
 
@@ -707,8 +758,5 @@ function loop() {
 }
 document.addEventListener('DOMContentLoaded', () => { init(); loop(); });
 </script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 </body>
 </html>
